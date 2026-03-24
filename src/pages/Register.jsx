@@ -253,7 +253,7 @@ export default function Register() {
               <div className="qr-wrap">
                 <img src={qrImage} alt="Payment QR" />
               </div>
-              <p className="upi-name">Munaga Sreeram</p>
+              <p className="upi-name"></p>
 
               <div className="file-input-wrapper" style={{ textAlign: "left", marginTop: 16 }}>
                 <label>Upload Payment Screenshot *</label>
