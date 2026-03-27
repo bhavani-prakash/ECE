@@ -7,7 +7,7 @@ import qrImage from "../assets/qr.jpeg";
 const EVENT_FEES = {
   "Tech Quiz": 70, "Bug Hunters": 70, "Circuit Detective": 70,
   "Paper Presentation": 70, "Poster Presentation": 70,
-  "Project Expo": 100, "Debate": 0,
+  "Project Expo": 100, "Debate": 40,
   "Free Fire": 200, "BGMI": 200,
   "cineQuest": 50, "Balloon Spirit": 50, "Rope Rumble": 50, "Ball Heist": 50,
 };
@@ -61,7 +61,7 @@ export default function Register() {
   const urlType      = params.get("type")  || "";
   const isFromUrl    = Boolean(urlEvent && urlType);
   const isRedirected = params.get("redirected") === "true";
-  const isFree       = event === "Debate";
+  const isFree       = fee === 0;
 
   useEffect(() => {
     if (urlEvent && urlType) {

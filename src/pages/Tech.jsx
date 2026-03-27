@@ -8,7 +8,7 @@ const events = [
   { name: "Paper Presentation",  fee: 70  },
   { name: "Poster Presentation", fee: 70  },
   { name: "Project Expo",        fee: 100, note: "₹100 per team (2–3 members)" },
-  { name: "Debate",              fee: 0,   note: "Free event" },
+  { name: "Debate",              fee: 40 },
 ];
 
 export default function Tech() {
