@@ -6,6 +6,7 @@ import Register         from "./pages/Register.jsx";
 import Greeting         from "./pages/Greeting.jsx";
 import Admin            from "./pages/Admin.jsx";
 import PermissionLetter from "./pages/PermissionLetter.jsx";
+import PaymentStats     from "./pages/PaymentStats.jsx";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/greeting"          element={<Greeting />} />
       <Route path="/permission-letter" element={<PermissionLetter />} />
       <Route path="/admin"             element={<Admin />} />
+      <Route path="/payment-stats"     element={<PaymentStats />} />
     </Routes>
   );
 }
