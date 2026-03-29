@@ -14,27 +14,53 @@ const EVENT_FEES = {
 const TECH_EVENTS    = ["Tech Quiz","Bug Hunters","Circuit Detective","Paper Presentation","Poster Presentation","Project Expo","Debate"];
 const NONTECH_EVENTS = ["Free Fire","BGMI","cineQuest","Balloon Spirit","Rope Rumble","Ball Heist"];
 
-// Compress image and convert to base64 — stored inside Firestore, no Storage plan needed
-const fileToBase64 = (file) =>
+
+
+const CLOUDINARY_CLOUD_NAME    = "dxyz1234";          // your cloud name
+const CLOUDINARY_UPLOAD_PRESET = "eclectica_preset";  // your preset name
+
+const compressImage = (file) =>
   new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
+      URL.revokeObjectURL(url);
       const MAX = 800;
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round((h * MAX) / w); w = MAX; }
-        else        { w = Math.round((w * MAX) / h); h = MAX; }
+        else       { w = Math.round((w * MAX) / h); h = MAX; }
       }
       const canvas = document.createElement("canvas");
       canvas.width = w; canvas.height = h;
       canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/jpeg", 0.7));
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Compression failed")), "image/jpeg", 0.7);
     };
-    img.onerror = reject;
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Could not load image")); };
     img.src = url;
   });
+
+const uploadToCloudinary = async (file, onProgress) => {
+  const blob     = await compressImage(file);
+  const formData = new FormData();
+  formData.append("file",          blob);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  formData.append("folder",        "eclectica_screenshots");
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status === 200) resolve(JSON.parse(xhr.responseText).secure_url);
+      else { console.error("Cloudinary error:", xhr.responseText); reject(new Error("Upload failed: " + xhr.status)); }
+    };
+    xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.send(formData);
+  });
+};
 
 export default function Register() {
   const navigate   = useNavigate();
@@ -54,6 +80,7 @@ export default function Register() {
   const [utrNumber,      setUtr]       = useState("");
   const [screenshot,     setShot]      = useState(null);
   const [preview,        setPreview]   = useState(null);
+  const [uploadProgress, setProgress]  = useState(0);
   const [loading,        setLoading]   = useState(false);
   const [status,         setStatus]    = useState("");
 
@@ -77,6 +104,7 @@ export default function Register() {
     if (!file.type.startsWith("image/")) { alert("Please upload an image file."); return; }
     if (file.size > 12 * 1024 * 1024)   { alert("Image must be under 12 MB."); return; }
     setShot(file);
+    setProgress(0);
     const reader = new FileReader();
     reader.onloadend = () => setPreview(reader.result);
     reader.readAsDataURL(file);
@@ -96,68 +124,86 @@ export default function Register() {
       alert("Please enter a valid email address.");
       return;
     }
-    if (!isFree && !screenshot) {
-      alert("Please upload your payment screenshot.");
-      return;
-    }
-    if (!isFree && !utrNumber.trim()) {
-      alert("Please enter the UTR / reference number.");
-      return;
-    }
+    if (!isFree && !screenshot) { alert("Please upload your payment screenshot."); return; }
+    if (!isFree && !utrNumber.trim()) { alert("Please enter the UTR / reference number."); return; }
 
-    setLoading(true);
+    setLoading(true); setProgress(0);
 
     try {
-      // 1. Check for duplicate
-      setStatus("Checking registration…");
-      const dupQ = query(
-        collection(db, "registrations"),
-        where("rollnumber", "==", rollnumber.trim().toUpperCase()),
-        where("event",      "==", event)
-      );
-      const dupSnap = await getDocs(dupQ);
+      // 1. Duplicate check
+      setStatus("Checking registration...");
+      let dupSnap;
+      try {
+        const dupQ = query(
+          collection(db, "registrations"),
+          where("rollnumber", "==", rollnumber.trim().toUpperCase()),
+          where("event",      "==", event)
+        );
+        dupSnap = await getDocs(dupQ);
+      } catch (dupErr) {
+        console.warn("Duplicate check failed (non-fatal):", dupErr.code, dupErr.message);
+        dupSnap = { empty: true };
+      }
       if (!dupSnap.empty) {
         alert("You are already registered for this event!");
-        setLoading(false);
-        setStatus("");
-        return;
+        setLoading(false); setStatus(""); return;
       }
 
-      // 2. Compress screenshot → base64 (no Firebase Storage needed)
-      let screenshotBase64 = null;
+      // 2. Upload to Cloudinary
+      let screenshotURL = null;
       if (!isFree && screenshot) {
-        setStatus("Processing screenshot…");
-        screenshotBase64 = await fileToBase64(screenshot);
+        setStatus("Uploading screenshot...");
+        try {
+          screenshotURL = await uploadToCloudinary(screenshot, (pct) => {
+            setProgress(pct);
+            setStatus(`Uploading screenshot... ${pct}%`);
+          });
+          console.log("Uploaded:", screenshotURL);
+        } catch (uploadErr) {
+          console.error("Upload failed (non-fatal):", uploadErr.message);
+          screenshotURL = null; // UTR is still saved, can verify manually
+        }
       }
 
-      // 3. Save everything to Firestore
-      setStatus("Saving registration…");
-      await addDoc(collection(db, "registrations"), {
-        name:             name.trim(),
-        email:            email.trim().toLowerCase(),
-        college:          college.trim(),
-        rollnumber:       rollnumber.trim().toUpperCase(),
-        contactnumber:    contactnumber.trim(),
-        whatsappnumber:   whatsappnumber.trim(),
-        year,
-        department:       department.trim(),
-        eventType,
-        event,
-        paymentAmount:    fee,
-        paymentStatus:    isFree ? "free" : "pending",
-        utrNumber:        isFree ? null : utrNumber.trim(),
-        screenshotBase64,
-        createdAt:        serverTimestamp(),
-      });
+      // 3. Save to Firestore (tiny doc - just text + URL)
+      setStatus("Saving registration...");
+      const docData = {
+        name: name.trim(), email: email.trim().toLowerCase(),
+        college: college.trim(), rollnumber: rollnumber.trim().toUpperCase(),
+        contactnumber: contactnumber.trim(), whatsappnumber: whatsappnumber.trim(),
+        year, department: department.trim(), eventType, event,
+        paymentAmount: fee, paymentStatus: isFree ? "free" : "pending",
+        utrNumber: isFree ? null : utrNumber.trim(),
+        screenshotURL,
+        createdAt: serverTimestamp(), createdAtMs: Date.now(),
+      };
 
+      const RETRYABLE = new Set(["unavailable","deadline-exceeded","internal","aborted"]);
+      const trySave = async (attempt) => {
+        try {
+          await addDoc(collection(db, "registrations"), docData);
+        } catch (saveErr) {
+          console.error(`Save attempt ${attempt}:`, saveErr.code, saveErr.message);
+          if (attempt === 1 && RETRYABLE.has(saveErr.code)) {
+            setStatus("Connection issue, retrying...");
+            await new Promise(r => setTimeout(r, 2500));
+            await trySave(2);
+          } else throw saveErr;
+        }
+      };
+      await trySave(1);
       navigate("/greeting");
 
     } catch (err) {
-      console.error("Registration error:", err);
-      alert("Registration failed: " + (err.message || "Please try again."));
+      console.error("Registration FINAL error:", { code: err.code, message: err.message, err });
+      let msg = "Registration failed. Please try again.";
+      if (err.code === "resource-exhausted") msg = "Server quota exceeded. Wait 1 minute and retry.";
+      else if (err.code === "unavailable" || err.code === "deadline-exceeded") msg = "Network timeout. Check connection and retry.";
+      else if (err.code === "permission-denied") msg = "Permission denied. Contact: +91 8125035960.";
+      else if (err.code === "not-found") msg = "Database error. Contact: +91 8125035960.";
+      alert(`${msg}\n\n(Error: ${err.code || err.message || "unknown"})`);
     } finally {
-      setLoading(false);
-      setStatus("");
+      setLoading(false); setStatus(""); setProgress(0);
     }
   };
 
@@ -236,7 +282,7 @@ export default function Register() {
                 onChange={e => {
                   const ev = e.target.value;
                   setEvent(ev); setFee(EVENT_FEES[ev] ?? 0);
-                  setShot(null); setPreview(null); setUtr("");
+                  setShot(null); setPreview(null); setUtr(""); setProgress(0);
                 }}>
                 <option value="">Select Event</option>
                 {(eventType === "technical" ? TECH_EVENTS : NONTECH_EVENTS).map(ev => (
@@ -260,6 +306,14 @@ export default function Register() {
                 <input type="file" accept="image/*" required={!isFree} onChange={handleFile} />
                 <p style={{ fontSize: 12, color: "#888", marginTop: 4 }}>JPG, PNG, WEBP — max 12 MB</p>
                 {preview && <img src={preview} alt="preview" className="screenshot-preview" />}
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden", height: 6 }}>
+                      <div style={{ width: `${uploadProgress}%`, background: "#d4af37", height: "100%", transition: "width 0.3s" }} />
+                    </div>
+                    <p style={{ fontSize: 12, color: "#d4af37", marginTop: 4 }}>Uploading... {uploadProgress}%</p>
+                  </div>
+                )}
               </div>
 
               <label style={{ display: "block", textAlign: "left", marginTop: 12 }}>UTR / Reference Number *</label>
@@ -280,10 +334,10 @@ export default function Register() {
           )}
 
           <button type="submit" className="btn-submit" disabled={loading}>
-            {loading ? (status || "Submitting…") : "Submit Registration"}
+            {loading ? (status || "Submitting...") : "Submit Registration"}
           </button>
 
-          {loading && <p className="loading-note">Please wait, do not close or refresh this page…</p>}
+          {loading && <p className="loading-note">Please wait, do not close or refresh this page...</p>}
 
         </form>
       </section>
