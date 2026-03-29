@@ -34,12 +34,9 @@ function ScreenshotModal({ src, name, onClose }) {
           gap: 14,
         }}
       >
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <p style={{ color: "#f4d03f", fontWeight: 600, fontSize: "0.95rem" }}>
-              Payment Screenshot
-            </p>
+            <p style={{ color: "#f4d03f", fontWeight: 600, fontSize: "0.95rem" }}>Payment Screenshot</p>
             <p style={{ color: "#aaa", fontSize: "0.82rem", marginTop: 2 }}>{name}</p>
           </div>
           <button
@@ -52,7 +49,6 @@ function ScreenshotModal({ src, name, onClose }) {
           >✕</button>
         </div>
 
-        {/* Image */}
         <div style={{ overflowY: "auto", borderRadius: 8, background: "#000", textAlign: "center" }}>
           <img
             src={src}
@@ -61,10 +57,10 @@ function ScreenshotModal({ src, name, onClose }) {
           />
         </div>
 
-        {/* Download button */}
         <a
           href={src}
-          download={`screenshot_${name?.replace(/\s+/g, "_")}.jpg`}
+          target="_blank"
+          rel="noreferrer"
           style={{
             display: "block", textAlign: "center",
             padding: "10px", borderRadius: 8,
@@ -73,7 +69,7 @@ function ScreenshotModal({ src, name, onClose }) {
             textDecoration: "none",
           }}
         >
-          ⬇️ Download Screenshot
+          ⬇️ Open Full Image
         </a>
       </div>
     </div>
@@ -92,9 +88,8 @@ export default function Admin() {
   const [filterEvent,   setFilterEvent]  = useState("All");
   const [filterStatus,  setFilterStatus] = useState("All");
 
-  // Screenshot modal state
-  const [modalSrc,      setModalSrc]     = useState(null);
-  const [modalName,     setModalName]    = useState("");
+  const [modalSrc,  setModalSrc]  = useState(null);
+  const [modalName, setModalName] = useState("");
 
   const openModal  = (src, name) => { setModalSrc(src); setModalName(name); };
   const closeModal = ()           => { setModalSrc(null); setModalName(""); };
@@ -163,7 +158,11 @@ export default function Admin() {
     return d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
   };
 
-  // ── Login screen ─────────────────────────────────────────────────────────────
+  // ── Helper: get screenshot src from either field (supports old + new records) ──
+  // Old records used screenshotBase64, new records use screenshotURL (Cloudinary)
+  const getScreenshot = (r) => r.screenshotURL || r.screenshotBase64 || null;
+
+  // ── Login screen ──────────────────────────────────────────────────────────────
   if (!loggedIn) {
     return (
       <div className="admin-login">
@@ -185,7 +184,6 @@ export default function Admin() {
   // ── Dashboard ─────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Screenshot modal */}
       <ScreenshotModal src={modalSrc} name={modalName} onClose={closeModal} />
 
       <div className="dashboard">
@@ -244,57 +242,62 @@ export default function Admin() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r, i) => (
-                  <tr key={r.id}>
-                    <td>{i + 1}</td>
-                    <td>{r.name}</td>
-                    <td>{r.rollnumber}</td>
-                    <td style={{ maxWidth: 150, wordBreak: "break-word" }}>{r.college}</td>
-                    <td>{r.department}</td>
-                    <td>{r.year}</td>
-                    <td><strong>{r.event}</strong></td>
-                    <td>{r.contactnumber}</td>
-                    <td style={{ fontSize: "0.8rem" }}>{r.email}</td>
-                    <td style={{ fontFamily: "monospace", fontSize: "0.8rem" }}>{r.utrNumber || "—"}</td>
+                {filtered.map((r, i) => {
+                  const shot = getScreenshot(r);
+                  return (
+                    <tr key={r.id}>
+                      <td>{i + 1}</td>
+                      <td>{r.name}</td>
+                      <td>{r.rollnumber}</td>
+                      <td style={{ maxWidth: 150, wordBreak: "break-word" }}>{r.college}</td>
+                      <td>{r.department}</td>
+                      <td>{r.year}</td>
+                      <td><strong>{r.event}</strong></td>
+                      <td>{r.contactnumber}</td>
+                      <td style={{ fontSize: "0.8rem" }}>{r.email}</td>
+                      <td style={{ fontFamily: "monospace", fontSize: "0.8rem" }}>{r.utrNumber || "—"}</td>
 
-                    {/* Screenshot cell — shows thumbnail + click to open modal */}
-                    <td>
-                      {r.screenshotBase64 ? (
-                        <div
-                          onClick={() => openModal(r.screenshotBase64, `${r.name} — ${r.event}`)}
-                          style={{ cursor: "pointer", display: "inline-block" }}
-                          title="Click to view screenshot"
-                        >
-                          <img
-                            src={r.screenshotBase64}
-                            alt="payment"
-                            style={{
-                              width: 48, height: 48,
-                              objectFit: "cover",
-                              borderRadius: 6,
-                              border: "2px solid rgba(212,175,55,0.4)",
-                              display: "block",
-                              transition: "border-color 0.2s",
-                            }}
-                            onMouseOver={e => e.target.style.borderColor = "#f4d03f"}
-                            onMouseOut={e  => e.target.style.borderColor = "rgba(212,175,55,0.4)"}
-                          />
-                          <span style={{ fontSize: "0.72rem", color: "#888", display: "block", textAlign: "center", marginTop: 2 }}>
-                            tap to view
-                          </span>
-                        </div>
-                      ) : "—"}
-                    </td>
+                      {/* Screenshot cell — works for both old base64 and new Cloudinary URL */}
+                      <td>
+                        {shot ? (
+                          <div
+                            onClick={() => openModal(shot, `${r.name} — ${r.event}`)}
+                            style={{ cursor: "pointer", display: "inline-block" }}
+                            title="Click to view screenshot"
+                          >
+                            <img
+                              src={shot}
+                              alt="payment"
+                              style={{
+                                width: 48, height: 48,
+                                objectFit: "cover",
+                                borderRadius: 6,
+                                border: "2px solid rgba(212,175,55,0.4)",
+                                display: "block",
+                                transition: "border-color 0.2s",
+                              }}
+                              onMouseOver={e => e.target.style.borderColor = "#f4d03f"}
+                              onMouseOut={e  => e.target.style.borderColor = "rgba(212,175,55,0.4)"}
+                            />
+                            <span style={{ fontSize: "0.72rem", color: "#888", display: "block", textAlign: "center", marginTop: 2 }}>
+                              tap to view
+                            </span>
+                          </div>
+                        ) : (
+                          <span style={{ color: "#555", fontSize: "0.8rem" }}>—</span>
+                        )}
+                      </td>
 
-                    <td><span className={`badge ${r.paymentStatus}`}>{r.paymentStatus}</span></td>
-                    <td style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>{fmt(r.createdAt)}</td>
-                    <td>
-                      {r.paymentStatus === "pending"
-                        ? <button className="btn-verify" onClick={() => verifyPayment(r.id)}>✓ Verify</button>
-                        : <span style={{ color: "#555", fontSize: "0.8rem" }}>—</span>}
-                    </td>
-                  </tr>
-                ))}
+                      <td><span className={`badge ${r.paymentStatus}`}>{r.paymentStatus}</span></td>
+                      <td style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>{fmt(r.createdAt)}</td>
+                      <td>
+                        {r.paymentStatus === "pending"
+                          ? <button className="btn-verify" onClick={() => verifyPayment(r.id)}>✓ Verify</button>
+                          : <span style={{ color: "#555", fontSize: "0.8rem" }}>—</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
