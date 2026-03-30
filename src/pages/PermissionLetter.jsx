@@ -349,13 +349,6 @@ export default function PermissionLetter() {
                     <span style={{ fontWeight: 600, color: event === ev.event ? "#f4d03f" : "#ddd" }}>
                       {ev.event}
                     </span>
-                    <span style={{
-                      fontSize: "0.78rem", fontWeight: 600, padding: "3px 10px",
-                      borderRadius: 20, background: "rgba(255,255,255,0.07)",
-                      color: statusColor(ev.paymentStatus),
-                    }}>
-                      {ev.paymentStatus}
-                    </span>
                   </div>
                 ))}
               </div>
