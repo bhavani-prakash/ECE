@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { collection, addDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { db } from "../config/firebase.js";
-import qrImage from "../assets/qr.jpeg";
+import qrImage from "../assets/murchant-afroz.jpeg";
 
 const EVENT_FEES = {
   "Tech Quiz": 70, "Bug Hunters": 70, "Circuit Detective": 70,
