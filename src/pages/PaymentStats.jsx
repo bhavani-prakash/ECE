@@ -3,6 +3,8 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../config/firebase.js";
 import "./PaymentStats.css";
 
+const CUTOFF_TIME = new Date(2026, 2, 30, 11, 30, 0); // March 30, 2026, 11:30 AM
+
 export default function PaymentStats() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,11 +21,28 @@ export default function PaymentStats() {
         let totalRegistrations = 0;
         const eventStats = {};
         const paymentStatusCount = { paid: 0, pending: 0, free: 0 };
+        
+        // Coordinator-wise split
+        let afrozAmount = 0;
+        let bhavaniAmount = 0;
 
         registrations.forEach(reg => {
-          totalAmount += reg.paymentAmount || 0;
+          const regTime = reg.createdAt?.toDate ? reg.createdAt.toDate() : new Date(reg.createdAt);
+          const isAfrozReg = regTime > CUTOFF_TIME;
+          
+          // Only count paid amounts (exclude free)
+          const amount = (reg.paymentAmount && reg.paymentStatus !== "free") ? (reg.paymentAmount || 0) : 0;
+          
+          totalAmount += amount;
           totalRegistrations += 1;
           paymentStatusCount[reg.paymentStatus]++;
+          
+          // Split by coordinator
+          if (isAfrozReg) {
+            afrozAmount += amount;
+          } else {
+            bhavaniAmount += amount;
+          }
 
           // Group by event
           if (!eventStats[reg.event]) {
@@ -34,7 +53,7 @@ export default function PaymentStats() {
             };
           }
           eventStats[reg.event].count += 1;
-          eventStats[reg.event].totalAmount += reg.paymentAmount || 0;
+          eventStats[reg.event].totalAmount += amount;
           eventStats[reg.event].byStatus[reg.paymentStatus]++;
         });
 
@@ -43,6 +62,8 @@ export default function PaymentStats() {
           totalRegistrations,
           paymentStatusCount,
           eventStats,
+          afrozAmount,
+          bhavaniAmount,
         });
       } catch (err) {
         console.error("Error fetching stats:", err);
@@ -72,6 +93,23 @@ export default function PaymentStats() {
       <button className="back-btn" onClick={() => window.history.back()}>← Back</button>
       
       <h1>💰 Payment Statistics</h1>
+      <p style={{ textAlign: "center", color: "#aaa", marginBottom: "30px", fontSize: "0.9em" }}>
+        Cutoff: March 30, 2026 at 11:30 AM
+      </p>
+
+      {/* Coordinator-wise Split */}
+      <div className="summary-cards">
+        <div className="card coordinator-afroz">
+          <h3>✨ Afroz</h3>
+          <p style={{ fontSize: "0.85em", color: "#aaa", margin: "5px 0" }}>After 11:30 AM</p>
+          <p className="amount">₹{stats.afrozAmount.toLocaleString()}</p>
+        </div>
+        <div className="card coordinator-bhavani">
+          <h3>💫 Bhavani</h3>
+          <p style={{ fontSize: "0.85em", color: "#aaa", margin: "5px 0" }}>Before 11:30 AM</p>
+          <p className="amount">₹{stats.bhavaniAmount.toLocaleString()}</p>
+        </div>
+      </div>
 
       {/* Summary Cards */}
       <div className="summary-cards">

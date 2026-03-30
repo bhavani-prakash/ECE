@@ -5,6 +5,67 @@ import { db } from "../config/firebase.js";
 const ADMIN_EMAIL    = "admin@ece.com";
 const ADMIN_PASSWORD = "eclectica2k26";
 
+// ── Server Error Overlay ──────────────────────────────────────────────────────
+function ServerErrorOverlay() {
+  return (
+    <div style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 999,
+      background: "linear-gradient(135deg, #0a1628 0%, #1a2d4d 100%)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "20px",
+      backdropFilter: "blur(2px)",
+      width: "100%",
+      height: "100vh",
+    }}>
+      <div style={{
+        textAlign: "center",
+      }}>
+        <div style={{
+          fontSize: "80px",
+          marginBottom: "30px",
+          animation: "pulse 2s infinite",
+        }}>⚠️</div>
+        
+        <h1 style={{
+          fontSize: "48px",
+          fontWeight: "bold",
+          color: "#f87171",
+          marginBottom: "16px",
+          margin: "0 0 16px 0",
+        }}>Server Error</h1>
+        
+        <p style={{
+          fontSize: "20px",
+          color: "#aaa",
+          marginBottom: "12px",
+          margin: "0 0 12px 0",
+        }}>500 - Internal Server Error</p>
+        
+        <p style={{
+          fontSize: "16px",
+          color: "#888",
+          margin: "0",
+          lineHeight: "1.6",
+        }}>
+          The admin panel is currently unavailable.
+        </p>
+      </div>
+      
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // ── Screenshot Modal ───────────────────────────────────────────────────────────
 function ScreenshotModal({ src, name, onClose }) {
   if (!src) return null;
@@ -184,6 +245,7 @@ export default function Admin() {
   // ── Dashboard ─────────────────────────────────────────────────────────────────
   return (
     <>
+      <ServerErrorOverlay />
       <ScreenshotModal src={modalSrc} name={modalName} onClose={closeModal} />
 
       <div className="dashboard">
