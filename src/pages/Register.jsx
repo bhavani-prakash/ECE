@@ -11,6 +11,23 @@ const EVENT_FEES = {
   "Free Fire": 200, "BGMI": 200,
   "cineQuest": 50, "Balloon Spirit": 50, "Rope Rumble": 50, "Ball Heist": 50,
 };
+
+// WhatsApp group links for each event
+const WHATSAPP_LINKS = {
+  "Tech Quiz": "https://chat.whatsapp.com/BHl63ANHgXMERZjg7k6IRh",
+  "Bug Hunters": "https://chat.whatsapp.com/DBmldCiDijdEoN0APpYUWT",
+  "Circuit Detective": "https://chat.whatsapp.com/Klq9gmF9zjvJf7zEUQvefK",
+  "Paper Presentation": "https://chat.whatsapp.com/E2eDAVuiuneLdjDpseagBL",
+  "Poster Presentation": "https://chat.whatsapp.com/JJnMYXQtiO32fV85wAztS7",
+  "Project Expo": "https://chat.whatsapp.com/EjyHg06jXBdAgGu3oApo33",
+  "Debate": "https://chat.whatsapp.com/E8y4AeQ0SMlIkRqm6nrEhF",
+  "Free Fire": "https://chat.whatsapp.com/Hpd8w8LeQCuIt98go6SpZg",
+  "BGMI": "https://chat.whatsapp.com/JowExNYiOXXEq3p8JjjZqj",
+  "cineQuest": "https://chat.whatsapp.com/CTwZSWVhYyOLYWsOi5EI5t",
+  "Balloon Spirit": "https://chat.whatsapp.com/KpFCmbAXqIU73pHENJQS3o",
+  "Rope Rumble": "https://chat.whatsapp.com/CQH4wK1MyO24Q5m2xJL3FU",
+  "Ball Heist": "https://chat.whatsapp.com/EMPqMBL8iH8KQuPAHpcgfB",
+};
 const TECH_EVENTS    = ["Tech Quiz","Bug Hunters","Circuit Detective","Paper Presentation","Poster Presentation","Project Expo","Debate"];
 const NONTECH_EVENTS = ["Free Fire","BGMI","cineQuest","Balloon Spirit","Rope Rumble","Ball Heist"];
 
@@ -230,6 +247,36 @@ export default function Register() {
             <div className="event-banner">
               <h3>📋 {event}</h3>
               <p>{isFree ? "Free Event — No payment required" : `Registration Fee: ₹${fee}`}</p>
+              {WHATSAPP_LINKS[event] && (
+                <a
+                  href={WHATSAPP_LINKS[event]}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="whatsapp-link"
+                  style={{
+                    display: "inline-block",
+                    marginTop: 10,
+                    padding: "8px 16px",
+                    backgroundColor: "#25D366",
+                    color: "white",
+                    textDecoration: "none",
+                    borderRadius: 6,
+                    fontSize: "0.9rem",
+                    fontWeight: 600,
+                    transition: "all 0.3s ease",
+                  }}
+                  onMouseOver={e => {
+                    e.target.style.backgroundColor = "#20BA5A";
+                    e.target.style.transform = "scale(1.05)";
+                  }}
+                  onMouseOut={e => {
+                    e.target.style.backgroundColor = "#25D366";
+                    e.target.style.transform = "scale(1)";
+                  }}
+                >
+                  💬 Join WhatsApp Group
+                </a>
+              )}
             </div>
           )}
 
