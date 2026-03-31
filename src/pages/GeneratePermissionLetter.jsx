@@ -483,18 +483,29 @@ export default function GeneratePermissionLetter() {
               style={{
                 width: "100%",
                 padding: "12px",
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(212,175,55,0.25)",
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(212,175,55,0.3)",
                 borderRadius: "8px",
                 color: "#fff",
                 fontSize: "14px",
                 outline: "none",
                 boxSizing: "border-box",
                 cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+              onMouseEnter={e => {
+                e.target.style.background = "rgba(255,255,255,0.12)";
+                e.target.style.borderColor = "rgba(212,175,55,0.5)";
+                e.target.style.boxShadow = "0 0 8px rgba(212,175,55,0.2)";
+              }}
+              onMouseLeave={e => {
+                e.target.style.background = "rgba(255,255,255,0.08)";
+                e.target.style.borderColor = "rgba(212,175,55,0.3)";
+                e.target.style.boxShadow = "none";
               }}
             >
-              <option value="">Select Event</option>
-              {EVENTS.map(ev => <option key={ev} value={ev}>{ev}</option>)}
+              <option value="" style={{ background: "#1a1a1a", color: "#aaa" }}>Select Event</option>
+              {EVENTS.map(ev => <option key={ev} value={ev} style={{ background: "#1a1a1a", color: "#fff" }}>{ev}</option>)}
             </select>
           </div>
 
@@ -541,18 +552,29 @@ export default function GeneratePermissionLetter() {
               style={{
                 width: "100%",
                 padding: "12px",
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(212,175,55,0.25)",
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(212,175,55,0.3)",
                 borderRadius: "8px",
                 color: "#fff",
                 fontSize: "14px",
                 outline: "none",
                 boxSizing: "border-box",
                 cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+              onMouseEnter={e => {
+                e.target.style.background = "rgba(255,255,255,0.12)";
+                e.target.style.borderColor = "rgba(212,175,55,0.5)";
+                e.target.style.boxShadow = "0 0 8px rgba(212,175,55,0.2)";
+              }}
+              onMouseLeave={e => {
+                e.target.style.background = "rgba(255,255,255,0.08)";
+                e.target.style.borderColor = "rgba(212,175,55,0.3)";
+                e.target.style.boxShadow = "none";
               }}
             >
-              <option value="">Select Department</option>
-              {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+              <option value="" style={{ background: "#1a1a1a", color: "#aaa" }}>Select Department</option>
+              {DEPARTMENTS.map(dept => <option key={dept} value={dept} style={{ background: "#1a1a1a", color: "#fff" }}>{dept}</option>)}
             </select>
           </div>
 
