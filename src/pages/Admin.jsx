@@ -245,7 +245,7 @@ export default function Admin() {
   // ── Dashboard ─────────────────────────────────────────────────────────────────
   return (
     <>
-      <ServerErrorOverlay />
+      {/* <ServerErrorOverlay /> */}
       <ScreenshotModal src={modalSrc} name={modalName} onClose={closeModal} />
 
       <div className="dashboard">
