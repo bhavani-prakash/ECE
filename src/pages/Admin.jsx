@@ -223,6 +223,46 @@ export default function Admin() {
   // Old records used screenshotBase64, new records use screenshotURL (Cloudinary)
   const getScreenshot = (r) => r.screenshotURL || r.screenshotBase64 || null;
 
+  // ── Download event-wise data as CSV ──
+  const downloadEventData = (eventName) => {
+    const eventData = data.filter(r => r.event === eventName);
+    if (eventData.length === 0) {
+      alert("No data for this event.");
+      return;
+    }
+
+    // Create CSV content
+    const headers = ["Name", "Email", "Roll No", "College", "Dept", "Year", "Contact", "WhatsApp", "Amount", "Status", "UTR", "Date"];
+    const rows = eventData.map(r => [
+      r.name, r.email, r.rollnumber, r.college, r.department, r.year,
+      "'" + (r.contactnumber || ""), "'" + (r.whatsappnumber || ""), r.paymentAmount || 0, r.paymentStatus,
+      "'" + (r.utrNumber || "—"), fmt(r.createdAt)
+    ]);
+
+    const csv = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${eventName}_registrations_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  // ── Find duplicate UTR numbers ──
+  const getDuplicateUTRs = useMemo(() => {
+    const utrCount = {};
+    data.forEach(r => {
+      if (r.utrNumber && r.paymentStatus === "pending") {
+        utrCount[r.utrNumber] = (utrCount[r.utrNumber] || 0) + 1;
+      }
+    });
+    return Object.entries(utrCount).filter(([_, count]) => count > 1).map(([utr, count]) => ({
+      utr,
+      count,
+      registrations: data.filter(r => r.utrNumber === utr && r.paymentStatus === "pending")
+    }));
+  }, [data]);
+
   // ── Login screen ──────────────────────────────────────────────────────────────
   if (!loggedIn) {
     return (
@@ -286,6 +326,79 @@ export default function Admin() {
             {filtered.length} result{filtered.length !== 1 ? "s" : ""}
           </span>
         </div>
+
+        {/* Download Event Data */}
+        <div style={{
+          marginBottom: 20,
+          padding: 16,
+          background: "rgba(212,175,55,0.08)",
+          border: "1px solid rgba(212,175,55,0.2)",
+          borderRadius: 8,
+        }}>
+          <p style={{ color: "#d4af37", fontWeight: 600, marginBottom: 10 }}>📥 Download Event Data</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {allEvents.filter(e => e !== "All").map(event => (
+              <button
+                key={event}
+                onClick={() => downloadEventData(event)}
+                style={{
+                  padding: "8px 14px",
+                  background: "rgba(52, 211, 153, 0.2)",
+                  border: "1px solid rgba(52, 211, 153, 0.4)",
+                  color: "#34d399",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                  fontWeight: 500,
+                  transition: "all 0.2s",
+                }}
+                onMouseOver={e => {
+                  e.target.style.background = "rgba(52, 211, 153, 0.3)";
+                  e.target.style.borderColor = "rgba(52, 211, 153, 0.6)";
+                }}
+                onMouseOut={e => {
+                  e.target.style.background = "rgba(52, 211, 153, 0.2)";
+                  e.target.style.borderColor = "rgba(52, 211, 153, 0.4)";
+                }}
+              >
+                {event}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Duplicate UTR Numbers */}
+        {getDuplicateUTRs.length > 0 && (
+          <div style={{
+            marginBottom: 20,
+            padding: 16,
+            background: "rgba(248, 113, 113, 0.08)",
+            border: "1px solid rgba(248, 113, 113, 0.3)",
+            borderRadius: 8,
+          }}>
+            <p style={{ color: "#f87171", fontWeight: 600, marginBottom: 12 }}>⚠️ Duplicate UTR Numbers ({getDuplicateUTRs.length})</p>
+            {getDuplicateUTRs.map((dup, idx) => (
+              <div key={idx} style={{
+                marginBottom: 12,
+                padding: 12,
+                background: "rgba(0,0,0,0.2)",
+                borderRadius: 6,
+                border: "1px solid rgba(248, 113, 113, 0.2)",
+              }}>
+                <p style={{ color: "#f87171", fontWeight: 600, marginBottom: 8 }}>
+                  UTR: <span style={{ fontFamily: "monospace" }}>{dup.utr}</span> — {dup.count} entries
+                </p>
+                <div style={{ fontSize: "0.85rem", color: "#aaa" }}>
+                  {dup.registrations.map((r, i) => (
+                    <div key={i} style={{ marginBottom: 4, paddingLeft: 8, borderLeft: "2px solid rgba(248, 113, 113, 0.4)" }}>
+                      <strong>{r.name}</strong> ({r.rollnumber}) — {r.event} — {r.email}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Table */}
         {loading ? (

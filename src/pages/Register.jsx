@@ -131,6 +131,12 @@ export default function Register() {
     e.preventDefault();
     if (loading) return;
 
+    // Check if Free Fire or BGMI registration is closed
+    if (event === "Free Fire" || event === "BGMI") {
+      alert(`Registration for ${event} is now closed. Thank you!`);
+      return;
+    }
+
     if (!name.trim() || !email.trim() || !college.trim() || !rollnumber.trim() ||
         !contactnumber.trim() || !whatsappnumber.trim() || !year || !department.trim() ||
         !eventType || !event) {
@@ -235,6 +241,64 @@ export default function Register() {
       </section>
 
       <section className="form-section">
+        {urlEvent === "Free Fire" || urlEvent === "BGMI" ? (
+          <div style={{
+            textAlign: "center",
+            padding: "80px 20px",
+            background: "rgba(248, 113, 113, 0.05)",
+            borderRadius: "12px",
+            border: "2px solid rgba(248, 113, 113, 0.3)",
+            marginTop: "40px",
+          }}>
+            <div style={{
+              fontSize: "64px",
+              marginBottom: "24px",
+            }}>🔒</div>
+            
+            <h2 style={{
+              fontSize: "32px",
+              fontWeight: "bold",
+              color: "#f87171",
+              marginBottom: "16px",
+              margin: "0 0 16px 0",
+            }}>Registration Closed</h2>
+            
+            <p style={{
+              fontSize: "18px",
+              color: "#aaa",
+              marginBottom: "12px",
+              margin: "0 0 12px 0",
+            }}>{urlEvent}</p>
+            
+            <p style={{
+              fontSize: "16px",
+              color: "#888",
+              lineHeight: "1.6",
+              maxWidth: "500px",
+              margin: "0 auto",
+            }}>
+              Registrations for {urlEvent} have been closed. Thank you for your interest!
+            </p>
+            
+            <a href="/" style={{
+              display: "inline-block",
+              marginTop: "32px",
+              padding: "12px 32px",
+              background: "linear-gradient(135deg, #d4af37, #f4d03f)",
+              color: "#0a1628",
+              textDecoration: "none",
+              borderRadius: "8px",
+              fontWeight: "600",
+              transition: "transform 0.2s",
+              cursor: "pointer",
+            }}
+            onMouseOver={e => e.target.style.transform = "scale(1.05)"}
+            onMouseOut={e => e.target.style.transform = "scale(1)"}
+            >
+              ← Back to Home
+            </a>
+          </div>
+        ) : (
         <form className="reg-form" onSubmit={handleSubmit}>
 
           {isRedirected && (
@@ -333,7 +397,9 @@ export default function Register() {
                 }}>
                 <option value="">Select Event</option>
                 {(eventType === "technical" ? TECH_EVENTS : NONTECH_EVENTS).map(ev => (
-                  <option key={ev} value={ev}>{ev} — {EVENT_FEES[ev] === 0 ? "Free" : `₹${EVENT_FEES[ev]}`}</option>
+                  <option key={ev} value={ev} disabled={ev === "Free Fire" || ev === "BGMI"}>
+                    {(ev === "Free Fire" || ev === "BGMI") ? `${ev} — Registration Closed` : `${ev} — ${EVENT_FEES[ev] === 0 ? "Free" : `₹${EVENT_FEES[ev]}`}`}
+                  </option>
                 ))}
               </select>
             </>
@@ -387,6 +453,7 @@ export default function Register() {
           {loading && <p className="loading-note">Please wait, do not close or refresh this page...</p>}
 
         </form>
+        )}
       </section>
 
       <footer>
