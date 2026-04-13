@@ -24,22 +24,16 @@ const loadPdfLib = () =>
       return; 
     }
     
-    const timeoutId = setTimeout(() => {
-      reject(new Error("PDF library failed to load. Please check your internet connection."));
-    }, 15000); // 15 second timeout
-    
-    const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.13.0/pdf-lib.min.js";
-    s.onload = () => {
-      clearTimeout(timeoutId);
-      cachedPDFLib = window.PDFLib;
-      resolve(window.PDFLib);
-    };
-    s.onerror = () => {
-      clearTimeout(timeoutId);
-      reject(new Error("Failed to load PDF library from CDN."));
-    };
-    document.head.appendChild(s);
+    // If pdf-lib is not available, it was preloaded in index.html
+    // Give it a moment to ensure it's ready
+    setTimeout(() => {
+      if (window.PDFLib) {
+        cachedPDFLib = window.PDFLib;
+        resolve(window.PDFLib);
+      } else {
+        reject(new Error("PDF library is not available. Please reload the page."));
+      }
+    }, 100);
   });
 
 // ── Fetch PDF from URL with caching and timeout ────────────────────────────────
