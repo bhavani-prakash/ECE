@@ -265,10 +265,20 @@ export default function Certificate() {
     minWidth: "120px",
   };
 
+  const eventTitleStyle = {
+    fontSize: "28px",
+    fontWeight: "bold",
+    color: "#667eea",
+    marginBottom: "5px",
+    textAlign: "center",
+    letterSpacing: "1px",
+  };
+
   return (
     <div style={containerStyle}>
       <div style={cardStyle}>
-        <h1 style={titleStyle}>📜 Certificate of Appreciation</h1>
+        <h2 style={eventTitleStyle}>ECLECTICA 2K26</h2>
+        <h1 style={titleStyle}>📜 Certificate of participation </h1>
         <p style={subtitleStyle}>
           Enter your roll number to download your participation certificate
         </p>
