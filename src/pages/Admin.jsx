@@ -285,7 +285,7 @@ export default function Admin() {
   // ── Dashboard ─────────────────────────────────────────────────────────────────
   return (
     <>
-      <ServerErrorOverlay />
+      <ServerErrorOverlay /> 
       <ScreenshotModal src={modalSrc} name={modalName} onClose={closeModal} />
 
       <div className="dashboard">
@@ -413,7 +413,7 @@ export default function Admin() {
                   <th>#</th><th>Name</th><th>Roll No</th><th>College</th>
                   <th>Dept</th><th>Year</th><th>Event</th>
                   <th>Contact</th><th>Email</th><th>UTR</th>
-                  <th>Screenshot</th><th>Status</th><th>Date</th><th>Action</th>
+                  <th>Screenshot</th><th>Status</th><th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -464,7 +464,7 @@ export default function Admin() {
                       </td>
 
                       <td><span className={`badge ${r.paymentStatus}`}>{r.paymentStatus}</span></td>
-                      <td style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>{fmt(r.createdAt)}</td>
+                      
                       <td>
                         {r.paymentStatus === "pending"
                           ? <button className="btn-verify" onClick={() => verifyPayment(r.id)}>✓ Verify</button>

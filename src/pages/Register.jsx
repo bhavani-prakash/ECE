@@ -131,8 +131,8 @@ export default function Register() {
     e.preventDefault();
     if (loading) return;
 
-    // Check if Free Fire or BGMI registration is closed
-    if (event === "Free Fire" || event === "BGMI") {
+    // Check if Free Fire registration is closed
+    if (event === "Free Fire") {
       alert(`Registration for ${event} is now closed. Thank you!`);
       return;
     }
@@ -241,7 +241,7 @@ export default function Register() {
       </section>
 
       <section className="form-section">
-        {urlEvent === "Free Fire" || urlEvent === "BGMI" ? (
+        {urlEvent === "Free Fire" ? (
           <div style={{
             textAlign: "center",
             padding: "80px 20px",
@@ -397,8 +397,8 @@ export default function Register() {
                 }}>
                 <option value="">Select Event</option>
                 {(eventType === "technical" ? TECH_EVENTS : NONTECH_EVENTS).map(ev => (
-                  <option key={ev} value={ev} disabled={ev === "Free Fire" || ev === "BGMI"}>
-                    {(ev === "Free Fire" || ev === "BGMI") ? `${ev} — Registration Closed` : `${ev} — ${EVENT_FEES[ev] === 0 ? "Free" : `₹${EVENT_FEES[ev]}`}`}
+                  <option key={ev} value={ev} disabled={ev === "Free Fire"}>
+                    {ev === "Free Fire" ? `${ev} — Registration Closed` : `${ev} — ${EVENT_FEES[ev] === 0 ? "Free" : `₹${EVENT_FEES[ev]}`}`}
                   </option>
                 ))}
               </select>

@@ -11,6 +11,8 @@ import BugHuntersRound3   from "./pages/BugHuntersRound3.jsx";
 import AdminUploadBugHunters from "./pages/AdminUploadBugHunters.jsx";
 import PaymentStats       from "./pages/PaymentStats.jsx";
 import RegistrationManager from "./pages/RegistrationManager.jsx";
+import Certificate        from "./pages/Certificate.jsx";
+import DownloadHistory    from "./pages/DownloadHistory.jsx";
 
 export default function App() {
   return (
@@ -27,6 +29,8 @@ export default function App() {
       <Route path="/admin"               element={<Admin />} />
       <Route path="/payment-stats"       element={<PaymentStats />} />
       <Route path="/registration-manager" element={<RegistrationManager />} />
+      <Route path="/certificate"         element={<Certificate />} />
+      <Route path="/certificate-history" element={<DownloadHistory />} />
     </Routes>
   );
 }
