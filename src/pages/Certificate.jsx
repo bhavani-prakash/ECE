@@ -3,20 +3,34 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../config/firebase.js";
 import certificatePDF from "../assets/participation certificate final.pdf";
 
+// Cache variables for performance
+let cachedPDFBytes = null;
+let cachedPDFLib = null;
+
 // ── Load pdf-lib from CDN ──────────────────────────────────────────────────────
 const loadPdfLib = () =>
   new Promise((resolve) => {
-    if (window.PDFLib) { resolve(window.PDFLib); return; }
+    if (cachedPDFLib) { resolve(cachedPDFLib); return; }
+    if (window.PDFLib) { 
+      cachedPDFLib = window.PDFLib;
+      resolve(window.PDFLib); 
+      return; 
+    }
     const s = document.createElement("script");
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.13.0/pdf-lib.min.js";
-    s.onload = () => resolve(window.PDFLib);
+    s.onload = () => {
+      cachedPDFLib = window.PDFLib;
+      resolve(window.PDFLib);
+    };
     document.head.appendChild(s);
   });
 
-// ── Fetch PDF from URL ─────────────────────────────────────────────────────────
+// ── Fetch PDF from URL with caching ────────────────────────────────────────────
 const fetchPDF = async (url) => {
+  if (cachedPDFBytes) return cachedPDFBytes;
   const response = await fetch(url);
-  return response.arrayBuffer();
+  cachedPDFBytes = await response.arrayBuffer();
+  return cachedPDFBytes;
 };
 
 // ── Generate Certificate by overlaying text on template ────────────────────────
@@ -92,6 +106,7 @@ export default function Certificate() {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // ── Search for participant by roll number ────────────────────────────────────────
   const handleSearch = async () => {
@@ -143,17 +158,28 @@ export default function Certificate() {
 
     setDownloadLoading(true);
     setError("");
+    setElapsedSeconds(0);
+
+    // Timer to track elapsed time
+    const startTime = Date.now();
+    const timerInterval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
+    }, 100);
+
     try {
       await generateCertificatePDF(
         selectedParticipant.name,
         selectedParticipant.event || "ECLECTICA-2K26",
         selectedParticipant.rollnumber || "N/A"
       );
+      clearInterval(timerInterval);
       setShowSuccessModal(true);
     } catch (err) {
+      clearInterval(timerInterval);
       setError("Error generating certificate: " + err.message);
     } finally {
       setDownloadLoading(false);
+      clearInterval(timerInterval);
     }
   };
 
@@ -346,7 +372,11 @@ export default function Certificate() {
                 onMouseEnter={(e) => !downloadLoading && (e.target.style.background = downloadButtonHoverStyle.background)}
                 onMouseLeave={(e) => (e.target.style.background = downloadButtonStyle.background)}
               >
-                {downloadLoading ? "Generating..." : "⬇️ Download Certificate"}
+                {downloadLoading ? (
+                  <span>⏱️ {elapsedSeconds}s - Generating...</span>
+                ) : (
+                  "⬇️ Download Certificate"
+                )}
               </button>
             </div>
           )}
