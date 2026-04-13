@@ -1,36 +1,64 @@
 import React, { useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../config/firebase.js";
-import certificatePDF from "../assets/participation certificate final.pdf";
+
+// Use relative path that works in both dev and production
+const CERTIFICATE_PDF_PATH = "/assets/participation certificate final.pdf";
 
 // Cache variables for performance
 let cachedPDFBytes = null;
 let cachedPDFLib = null;
 
-// ── Load pdf-lib from CDN ──────────────────────────────────────────────────────
+// ── Load pdf-lib from CDN with timeout ────────────────────────────────────────
 const loadPdfLib = () =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     if (cachedPDFLib) { resolve(cachedPDFLib); return; }
     if (window.PDFLib) { 
       cachedPDFLib = window.PDFLib;
       resolve(window.PDFLib); 
       return; 
     }
+    
+    const timeoutId = setTimeout(() => {
+      reject(new Error("PDF library failed to load. Please check your internet connection."));
+    }, 15000); // 15 second timeout
+    
     const s = document.createElement("script");
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.13.0/pdf-lib.min.js";
     s.onload = () => {
+      clearTimeout(timeoutId);
       cachedPDFLib = window.PDFLib;
       resolve(window.PDFLib);
+    };
+    s.onerror = () => {
+      clearTimeout(timeoutId);
+      reject(new Error("Failed to load PDF library from CDN."));
     };
     document.head.appendChild(s);
   });
 
-// ── Fetch PDF from URL with caching ────────────────────────────────────────────
+// ── Fetch PDF from URL with caching and timeout ────────────────────────────────
 const fetchPDF = async (url) => {
   if (cachedPDFBytes) return cachedPDFBytes;
-  const response = await fetch(url);
-  cachedPDFBytes = await response.arrayBuffer();
-  return cachedPDFBytes;
+  
+  try {
+    // Add timeout for fetch
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: Failed to fetch PDF`);
+    }
+    
+    cachedPDFBytes = await response.arrayBuffer();
+    return cachedPDFBytes;
+  } catch (err) {
+    console.error("PDF Fetch Error:", err);
+    throw new Error("Failed to load certificate template. Please try again.");
+  }
 };
 
 // ── Generate Certificate by overlaying text on template ────────────────────────
@@ -40,7 +68,7 @@ const generateCertificatePDF = async (participantName, eventName, rollNumber) =>
     const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
     // Fetch the template PDF
-    const templateBytes = await fetchPDF(certificatePDF);
+    const templateBytes = await fetchPDF(CERTIFICATE_PDF_PATH);
     const pdfDoc = await PDFDocument.load(templateBytes);
 
     // Get first page
