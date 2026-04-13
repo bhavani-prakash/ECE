@@ -2,8 +2,13 @@ import React, { useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../config/firebase.js";
 
-// Use relative path that works in both dev and production
-const CERTIFICATE_PDF_PATH = "/assets/participation certificate final.pdf";
+// Get the PDF path dynamically
+const getCertificatePDFPath = () => {
+  // In production (Netlify), assets are served from dist folder
+  const path = new URL("../assets/participation certificate final.pdf", import.meta.url).href;
+  console.log("Certificate PDF path:", path);
+  return path;
+};
 
 // Cache variables for performance
 let cachedPDFBytes = null;
@@ -57,7 +62,7 @@ const fetchPDF = async (url) => {
     return cachedPDFBytes;
   } catch (err) {
     console.error("PDF Fetch Error:", err);
-    throw new Error("Failed to load certificate template. Please try again.");
+    throw new Error("Failed to load certificate template. Please try again or contact: 8125035960");
   }
 };
 
@@ -68,7 +73,20 @@ const generateCertificatePDF = async (participantName, eventName, rollNumber) =>
     const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
     // Fetch the template PDF
-    const templateBytes = await fetchPDF(CERTIFICATE_PDF_PATH);
+    const templateBytes = await fetchPDF(getCertificatePDFPath());
+    
+    if (!templateBytes || templateBytes.byteLength === 0) {
+      throw new Error("PDF file is empty or not loaded correctly");
+    }
+    
+    // Check if PDF header is valid
+    const view = new Uint8Array(templateBytes);
+    const isValidPDF = view[0] === 0x25 && view[1] === 0x50 && view[2] === 0x44 && view[3] === 0x46; // Check for %PDF
+    if (!isValidPDF) {
+      console.error("Invalid PDF header. First bytes:", Array.from(view.slice(0, 20)).map(b => b.toString(16)));
+      throw new Error("File downloaded is not a valid PDF. This might be an HTML error page.");
+    }
+    
     const pdfDoc = await PDFDocument.load(templateBytes);
 
     // Get first page
