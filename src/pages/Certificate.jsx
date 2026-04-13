@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../config/firebase.js";
-
-// Certificate template path
-const CERTIFICATE_TEMPLATE = "/src/assets/participation certificate final.pdf";
+import certificatePDF from "../assets/participation certificate final.pdf";
 
 // ── Load pdf-lib from CDN ──────────────────────────────────────────────────────
 const loadPdfLib = () =>
@@ -28,7 +26,7 @@ const generateCertificatePDF = async (participantName, eventName, rollNumber) =>
     const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
     // Fetch the template PDF
-    const templateBytes = await fetchPDF(CERTIFICATE_TEMPLATE);
+    const templateBytes = await fetchPDF(certificatePDF);
     const pdfDoc = await PDFDocument.load(templateBytes);
 
     // Get first page
