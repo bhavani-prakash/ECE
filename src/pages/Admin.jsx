@@ -3,7 +3,7 @@ import { collection, getDocs, doc, updateDoc, query, orderBy } from "firebase/fi
 import { db } from "../config/firebase.js";
 
 const ADMIN_EMAIL    = "admin@ece.com";
-const ADMIN_PASSWORD = "eclectica2k26";
+const ADMIN_PASSWORD = "bunny812";
 
 // ── Server Error Overlay ──────────────────────────────────────────────────────
 function ServerErrorOverlay() {
