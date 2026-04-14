@@ -12,6 +12,7 @@ import AdminUploadBugHunters from "./pages/AdminUploadBugHunters.jsx";
 import PaymentStats       from "./pages/PaymentStats.jsx";
 import RegistrationManager from "./pages/RegistrationManager.jsx";
 import Certificate        from "./pages/Certificate.jsx";
+import CertificateDownload from "./pages/CertificateDownload.jsx";
 import DownloadHistory    from "./pages/DownloadHistory.jsx";
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
       <Route path="/payment-stats"       element={<PaymentStats />} />
       <Route path="/registration-manager" element={<RegistrationManager />} />
       <Route path="/certificate"         element={<Certificate />} />
+      <Route path="/certificate-download" element={<CertificateDownload />} />
       <Route path="/certificate-history" element={<DownloadHistory />} />
     </Routes>
   );
