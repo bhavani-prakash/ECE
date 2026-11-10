@@ -193,7 +193,18 @@ const generatePDF = async ({ students, college, department }) => {
   doc.save(`ECE_Fest_Attendance_Permission_${students.map(({ rollnumber }) => rollnumber).join("_")}.pdf`);
 };
 
-const DEPARTMENTS = ["ECE", "CSE", "EEE", "MECH", "CIVIL", "Other"];
+const DEPARTMENTS = [
+  "ECE",
+  "CSE",
+  "CSE- AI",
+  "CSE- DS",
+  "CSE- Cyber security",
+  "CSE- AIML",
+  "EEE",
+  "MECH",
+  "CIVIL",
+  "Other",
+];
 const YEARS = ["I B.Tech", "II B.Tech", "III B.Tech", "IV B.Tech"];
 const emptyStudent = () => ({ name: "", rollnumber: "", year: "I B.Tech" });
 
