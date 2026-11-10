@@ -1,280 +1,264 @@
 import React, { useState } from "react";
-import logoSrc from "../assets/logo.png";
+import logoSrc from "../assets/new logo.jpeg";
 
-// ── Load jsPDF from CDN ────────────────────────────────────────────────────────
 const loadJsPDF = () =>
-  new Promise((resolve) => {
-    if (window.jspdf) { resolve(window.jspdf.jsPDF); return; }
-    const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-    s.onload = () => resolve(window.jspdf.jsPDF);
-    document.head.appendChild(s);
+  new Promise((resolve, reject) => {
+    if (window.jspdf) {
+      resolve(window.jspdf.jsPDF);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    script.onload = () => resolve(window.jspdf.jsPDF);
+    script.onerror = () => reject(new Error("Unable to load the PDF generator."));
+    document.head.appendChild(script);
   });
 
-// ── Generate QR code as PNG data URL ─────────────────────────────────────────
 const generateQR = (text) =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     const loadLib = () =>
-      new Promise((res) => {
-        if (window.QRCode) { res(); return; }
-        const s = document.createElement("script");
-        s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
-        s.onload = res;
-        document.head.appendChild(s);
+      new Promise((res, rej) => {
+        if (window.QRCode) {
+          res();
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+        script.onload = res;
+        script.onerror = () => rej(new Error("Unable to load the QR generator."));
+        document.head.appendChild(script);
       });
 
     loadLib().then(() => {
-      const div = document.createElement("div");
-      div.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:150px;height:150px;";
-      document.body.appendChild(div);
-      new window.QRCode(div, {
+      const container = document.createElement("div");
+      container.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:180px;height:180px;";
+      document.body.appendChild(container);
+      new window.QRCode(container, {
         text,
-        width: 150,
-        height: 150,
+        width: 180,
+        height: 180,
         correctLevel: window.QRCode.CorrectLevel.M,
       });
       setTimeout(() => {
-        const canvas = div.querySelector("canvas");
-        resolve(canvas ? canvas.toDataURL("image/png") : null);
-        document.body.removeChild(div);
+        const canvas = container.querySelector("canvas");
+        document.body.removeChild(container);
+        if (!canvas) {
+          reject(new Error("Unable to create the QR code."));
+          return;
+        }
+        resolve(canvas.toDataURL("image/png"));
       }, 500);
-    });
+    }).catch(reject);
   });
 
-// ── Convert logo img src to base64 via canvas ─────────────────────────────────
 const imgToBase64 = (src) =>
   new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const c = document.createElement("canvas");
-      c.width  = img.naturalWidth;
-      c.height = img.naturalHeight;
-      c.getContext("2d").drawImage(img, 0, 0);
-      resolve(c.toDataURL("image/png"));
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      resolve(canvas.toDataURL("image/jpeg"));
     };
-    img.onerror = () => resolve(null);
-    img.src = src;
+    image.onerror = () => resolve(null);
+    image.src = src;
   });
 
-// ── PDF generator ─────────────────────────────────────────────────────────────
-const generatePDF = async (data) => {
+const generatePDF = async ({ students, college, department }) => {
   const JsPDF = await loadJsPDF();
-
   const doc = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const PW = 210;
+  const PH = 297;
+  const ML = 18;
+  const MR = 18;
+  const TW = PW - ML - MR;
 
-  const PW   = 210;   // page width  mm
-  const PH   = 297;   // page height mm
-  const ML   = 20;    // margin left
-  const MR   = 20;    // margin right
-  const TW   = PW - ML - MR;  // text width = 170mm
-
-  // ── Watermark logo ──────────────────────────────────────────────────────────
-  const logoB64 = await imgToBase64(logoSrc);
-  if (logoB64) {
+  const watermark = await imgToBase64(logoSrc);
+  if (watermark) {
     doc.saveGraphicsState();
-    doc.setGState(doc.GState({ opacity: 0.10 }));
-    const lSize = 140; // mm
-    doc.addImage(logoB64, "PNG", (PW - lSize) / 2, (PH - lSize) / 2 - 20, lSize, lSize);
+    doc.setGState(doc.GState({ opacity: 0.1 }));
+    doc.addImage(watermark, "JPEG", 37, 72, 136, 136);
     doc.restoreGraphicsState();
   }
 
-  // ── Header ──────────────────────────────────────────────────────────────────
+  doc.setTextColor(20, 35, 65);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(17);
-  doc.setTextColor(0, 0, 0);
-  doc.text("ECLECTICA-2K26", PW / 2, 18, { align: "center" });
-
-  doc.setFontSize(13);
-  doc.text("Permission Letter", PW / 2, 26, { align: "center" });
-
-  // Horizontal rule
-  doc.setDrawColor(180, 150, 50);
-  doc.setLineWidth(0.5);
-  doc.line(ML, 30, PW - MR, 30);
-
-  // Date — right aligned
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text("April 1, 2026", PW - MR, 38, { align: "right" });
-
-  // ── From block ──────────────────────────────────────────────────────────────
-  let y = 46;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.text("From:", ML, y); y += 5;
+  doc.setFontSize(15);
+  doc.text("MITS - DEEMED TO BE UNIVERSITY", PW / 2, 17, { align: "center" });
+  doc.setFontSize(10.5);
+  doc.text("DEPARTMENT OF ELECTRONICS AND COMMUNICATION ENGINEERING", PW / 2, 24, { align: "center" });
+  doc.setLineWidth(0.4);
+  doc.line(ML, 28, PW - MR, 28);
 
   doc.setFont("helvetica", "normal");
-  const fromLines = [
-    "The Coordinators",
-    "ECLECTICA 2K26",
-    "Department of Electronics and Communication Engineering",
-    "MITS Deemed to be University, Madanapalle",
-  ];
-  fromLines.forEach(l => { doc.text(l, ML, y); y += 5; });
-  y += 3;
+  doc.setFontSize(9.5);
+  doc.text("Date: 11-11-2026", PW - MR, 36, { align: "right" });
 
-  // ── To block ────────────────────────────────────────────────────────────────
+  let y = 43;
   doc.setFont("helvetica", "bold");
-  doc.text("To:", ML, y); y += 5;
-
+  doc.text("To:", ML, y);
+  y += 5;
   doc.setFont("helvetica", "normal");
-  const toLines = [
-    "The Head of the Department",
-    `Department of ${data.department || "_______________"}`,
-    data.college,
-  ];
-  toLines.forEach(l => { doc.text(l, ML, y); y += 5; });
-  y += 3;
+  doc.text("The Head of the Department", ML, y);
+  y += 5;
+  doc.text(`Department of ${department || "____________"}.`, ML, y);
+  y += 7;
 
-  // ── Subject ─────────────────────────────────────────────────────────────────
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  const subjectLines = doc.splitTextToSize(
-    "Subject: Request for Permission to Participate in ECLECTICA 2K26",
+  const subject = doc.splitTextToSize(
+    "Subject: Request for Attendance Permission for ECE Department Fest Participants",
     TW
   );
-  doc.text(subjectLines, ML, y); y += subjectLines.length * 5 + 4;
-
-  // ── Salutation ──────────────────────────────────────────────────────────────
+  doc.text(subject, ML, y);
+  y += subject.length * 5 + 3;
   doc.setFont("helvetica", "normal");
-  doc.text("Respected Sir/Madam,", ML, y); y += 7;
+  doc.text("Respected Sir/Madam,", ML, y);
+  y += 7;
 
-  // ── Body paragraphs ─────────────────────────────────────────────────────────
   const paragraphs = [
-    "We extend our greetings from the Department of Electronics and Communication Engineering, MITS Deemed to be University.",
-    `This is to inform you that ${data.name} (${data.rollnumber}), a student of your esteemed institution, has registered for the event ${data.event} to be conducted as part of ECLECTICA 2K26, our departmental technical symposium.`,
-    "In this regard, we kindly request you to grant permission to participate in the above-mentioned event. We assure you that the program will be conducted in a well-organized and disciplined manner. Participation in this event will provide valuable technical exposure and contribute to the academic and professional development.",
-    "We shall be grateful for your kind consideration and approval.",
+    "We are pleased to inform you that the Department of Electronics and Communication Engineering is organizing its Department Fest on 11th November 2026, featuring various technical and non-technical events.",
+    "A few students from your department have registered to participate in these events. We kindly request you to grant them permission to attend the fest and consider their attendance for the respective programme hours.",
+    "The list of participating students, with their names and roll numbers, is provided below for your reference.",
+    "We assure you that the students will maintain discipline and actively participate in the events. We sincerely request your support and cooperation in making this event a success.",
   ];
-
-  doc.setFontSize(10);
-  paragraphs.forEach(para => {
-    const lines = doc.splitTextToSize(para, TW);
-    lines.forEach((line, idx) => {
-      if (idx < lines.length - 1 && lines.length > 1) {
-        doc.text(line, ML, y, { maxWidth: TW, align: "justify" });
-      } else {
-        doc.text(line, ML, y);
-      }
-      y += 5;
-    });
-    y += 3;
+  paragraphs.forEach((paragraph) => {
+    const lines = doc.splitTextToSize(paragraph, TW);
+    doc.text(lines, ML, y, { maxWidth: TW, lineHeightFactor: 1.35 });
+    y += lines.length * 5.2 + 3;
   });
 
-  y += 2;
-  doc.text("Thanking you.", ML, y); y += 7;
-  doc.text("Yours sincerely,", ML, y); y += 16;
+  doc.text("Thank you.", ML, y);
+  y += 5;
+  doc.text("Yours faithfully,", ML, y);
+  y += 5;
+  doc.text("Department of Electronics and Communication Engineering", ML, y);
+  y += 5;
+  doc.text("MITS - Deemed to be University", ML, y);
+  y += 10;
 
-  // ── Signature blocks ─────────────────────────────────────────────────────────
-  const sigY = y;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("LIST OF PARTICIPATING STUDENTS", PW / 2, y, { align: "center" });
+  y += 5;
+
+  const rowHeight = 7;
+  const columns = [18, 70, 48, 38];
+  const tableY = y;
+  doc.setFillColor(20, 35, 65);
+  doc.setTextColor(255, 255, 255);
+  doc.rect(ML, tableY, TW, rowHeight, "F");
+  ["S. No.", "Name", "Roll No.", "Year"].forEach((label, index) => {
+    const x = ML + columns.slice(0, index).reduce((sum, width) => sum + width, 0);
+    doc.text(label, x + columns[index] / 2, tableY + 4.7, { align: "center" });
+  });
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  ["The Coordinators", "ECLECTICA 2K26", "Department of ECE", "MITS Deemed to be University", "Madanapalle"]
-    .forEach((l, i) => doc.text(l, ML, sigY + i * 5));
-
-  const hodLines = [
-    "Head of the Department",
-    `Department of ${data.department || "ECE"}`,
-  ];
-  hodLines.forEach((l, i) => {
-    doc.text(l, PW - MR, sigY + 20 + i * 5, { align: "right" });
+  doc.setTextColor(20, 35, 65);
+  students.forEach((student, index) => {
+    const rowY = tableY + rowHeight * (index + 1);
+    doc.rect(ML, rowY, TW, rowHeight);
+    doc.text(String(index + 1), ML + columns[0] / 2, rowY + 4.7, { align: "center" });
+    doc.text(student.name, ML + columns[0] + 3, rowY + 4.7, { maxWidth: columns[1] - 6 });
+    doc.text(student.rollnumber, ML + columns[0] + columns[1] + 3, rowY + 4.7, { maxWidth: columns[2] - 6 });
+    doc.text(student.year, ML + columns[0] + columns[1] + columns[2] + columns[3] / 2, rowY + 4.7, { align: "center" });
+  });
+  let columnX = ML;
+  columns.slice(0, -1).forEach((width) => {
+    columnX += width;
+    doc.line(columnX, tableY, columnX, tableY + rowHeight * (students.length + 1));
   });
 
-  // ── QR code (bottom-left) ────────────────────────────────────────────────────
   const qrText = JSON.stringify({
-    name:       data.name,
-    roll:       data.rollnumber,
-    event:      data.event,
-    college:    data.college,
-    department: data.department,
+    date: "11-11-2026",
+    college,
+    department,
+    students,
   });
   const qrDataUrl = await generateQR(qrText);
   if (qrDataUrl) {
-    const qrSize = 28;
-    const qrX    = ML;
-    const qrY    = PH - 46;
+    const qrSize = 31;
+    const qrX = PW - MR - qrSize;
+    const qrY = Math.min(tableY + rowHeight * (students.length + 1) + 7, PH - 52);
     doc.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
     doc.setFontSize(7);
     doc.setTextColor(100, 100, 100);
-    doc.text("Scan to verify registration", qrX + qrSize / 2, qrY + qrSize + 4, { align: "center" });
+    doc.text("Scan for all participant details", qrX + qrSize / 2, qrY + qrSize + 4, { align: "center" });
   }
 
-  // Bottom rule
-  doc.setDrawColor(180, 150, 50);
-  doc.setLineWidth(0.4);
+  doc.setTextColor(20, 35, 65);
+  doc.setFontSize(8.5);
+  doc.text("Department of ECE | MITS - Deemed to be University", ML, PH - 18);
   doc.line(ML, PH - 14, PW - MR, PH - 14);
-
-  doc.setFontSize(8);
-  doc.setTextColor(150, 150, 150);
-  doc.text("ECLECTICA 2K26 — Department of ECE, MITS Deemed to be University, Madanapalle", PW / 2, PH - 9, { align: "center" });
-
-  doc.save(`PermissionLetter_${data.rollnumber}_${data.event.replace(/\s+/g, "_")}.pdf`);
+  doc.save(`ECE_Fest_Attendance_Permission_${students.map(({ rollnumber }) => rollnumber).join("_")}.pdf`);
 };
 
-const EVENTS = [
-  "Tech Quiz", "Bug Hunters", "Circuit Detective", "Paper Presentation", "Poster Presentation",
-  "Project Expo", "Debate", "cineQuest", "Balloon Spirit", "Rope Rumble", "Ball Heist"
-];
+const DEPARTMENTS = ["ECE", "CSE", "EEE", "MECH", "CIVIL", "Other"];
+const YEARS = ["I B.Tech", "II B.Tech", "III B.Tech", "IV B.Tech"];
+const emptyStudent = () => ({ name: "", rollnumber: "", year: "I B.Tech" });
 
-const DEPARTMENTS = ["ECE", "CSE", "EEE", "MECH", "CIVIL", "CIVIL", "Other"];
+const inputStyle = {
+  width: "100%",
+  padding: "12px",
+  background: "rgba(255,255,255,0.07)",
+  border: "1px solid rgba(212,175,55,0.25)",
+  borderRadius: "8px",
+  color: "#fff",
+  fontSize: "14px",
+  outline: "none",
+  boxSizing: "border-box",
+};
+
+const selectStyle = {
+  ...inputStyle,
+  colorScheme: "dark",
+};
+
+const optionStyle = {
+  backgroundColor: "#ffffff",
+  color: "#0a1628",
+};
 
 export default function GeneratePermissionLetter() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPass, setLoginPass] = useState("");
   const [loginErr, setLoginErr] = useState("");
-
-  const [name, setName] = useState("");
-  const [rollnumber, setRollnumber] = useState("");
-  const [event, setEvent] = useState("");
+  const [students, setStudents] = useState([emptyStudent()]);
   const [college, setCollege] = useState("");
   const [department, setDepartment] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [genStatus, setGenStatus] = useState("");
 
-  const ADMIN_EMAIL = "admin@ece.com";
-  const ADMIN_PASSWORD = "eclectica2k26";
-
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (loginEmail === ADMIN_EMAIL && loginPass === ADMIN_PASSWORD) {
-      setLoggedIn(true);
-      setLoginErr("");
-    } else {
-      setLoginErr("Invalid credentials");
-    }
+  const updateStudent = (index, field, value) => {
+    setStudents((current) => current.map((student, studentIndex) =>
+      studentIndex === index ? { ...student, [field]: value } : student
+    ));
   };
 
-  const handleGenerate = async (e) => {
-    e.preventDefault();
-    if (!name.trim() || !rollnumber.trim() || !event || !college.trim() || !department) {
-      alert("Please fill in all fields.");
+  const handleGenerate = async (event) => {
+    event.preventDefault();
+    if (!college.trim() || !department || students.some(({ name, rollnumber }) => !name.trim() || !rollnumber.trim())) {
+      alert("Please complete the college, department, and all student fields.");
       return;
     }
-
     setGenerating(true);
-    setGenStatus("Generating permission letter...");
     try {
       await generatePDF({
-        name: name.trim(),
-        rollnumber: rollnumber.trim().toUpperCase(),
-        event,
+        students: students.map(({ name, rollnumber, year }) => ({
+          name: name.trim(),
+          rollnumber: rollnumber.trim().toUpperCase(),
+          year,
+        })),
         college: college.trim(),
         department,
       });
       alert("Permission letter downloaded successfully!");
-      setName("");
-      setRollnumber("");
-      setEvent("");
+      setStudents([emptyStudent()]);
       setCollege("");
       setDepartment("");
-      setGenStatus("");
-    } catch (err) {
-      console.error("Error:", err);
-      alert("Failed to generate letter: " + err.message);
-      setGenStatus("");
+    } catch (error) {
+      console.error("Error generating permission letter:", error);
+      alert(`Failed to generate letter: ${error.message}`);
     } finally {
       setGenerating(false);
     }
@@ -282,351 +266,56 @@ export default function GeneratePermissionLetter() {
 
   if (!loggedIn) {
     return (
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #0a1628 0%, #1a2d4d 100%)",
-        padding: "20px",
-      }}>
-        <div style={{
-          background: "rgba(0, 0, 0, 0.4)",
-          border: "1px solid rgba(212, 175, 55, 0.3)",
-          borderRadius: "12px",
-          padding: "40px",
-          maxWidth: "400px",
-          width: "100%",
-        }}>
-          <h2 style={{
-            textAlign: "center",
-            color: "#d4af37",
-            marginBottom: "24px",
-            fontSize: "24px",
-          }}>🔐 Admin Login</h2>
-          
-          <form onSubmit={handleLogin}>
-            <input
-              type="email"
-              placeholder="Admin email"
-              required
-              value={loginEmail}
-              onChange={e => setLoginEmail(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                marginBottom: "12px",
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(212,175,55,0.25)",
-                borderRadius: "8px",
-                color: "#fff",
-                fontSize: "14px",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-            
-            <input
-              type="password"
-              placeholder="Password"
-              required
-              value={loginPass}
-              onChange={e => setLoginPass(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                marginBottom: "16px",
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(212,175,55,0.25)",
-                borderRadius: "8px",
-                color: "#fff",
-                fontSize: "14px",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-            
-            <button
-              type="submit"
-              style={{
-                width: "100%",
-                padding: "12px",
-                background: "linear-gradient(135deg, #d4af37, #f4d03f)",
-                color: "#0a1628",
-                border: "none",
-                borderRadius: "8px",
-                fontWeight: "600",
-                cursor: "pointer",
-                fontSize: "14px",
-                transition: "transform 0.2s",
-              }}
-              onMouseOver={e => e.target.style.transform = "scale(1.02)"}
-              onMouseOut={e => e.target.style.transform = "scale(1)"}
-            >
-              Login
-            </button>
-            
-            {loginErr && <p style={{ color: "#f87171", textAlign: "center", marginTop: "12px", fontSize: "14px" }}>{loginErr}</p>}
-          </form>
-        </div>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #0a1628 0%, #1a2d4d 100%)", padding: "20px" }}>
+        <form onSubmit={(event) => {
+          event.preventDefault();
+          if (loginEmail === "admin@ece.com" && loginPass === "eclectica2k26") {
+            setLoggedIn(true);
+            setLoginErr("");
+          } else {
+            setLoginErr("Invalid credentials");
+          }
+        }} style={{ background: "rgba(0, 0, 0, 0.4)", border: "1px solid rgba(212, 175, 55, 0.3)", borderRadius: "12px", padding: "40px", maxWidth: "400px", width: "100%" }}>
+          <h2 style={{ textAlign: "center", color: "#d4af37", marginBottom: "24px" }}>Admin Login</h2>
+          <input type="email" placeholder="Admin email" required value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} style={{ ...inputStyle, marginBottom: "12px" }} />
+          <input type="password" placeholder="Password" required value={loginPass} onChange={(event) => setLoginPass(event.target.value)} style={{ ...inputStyle, marginBottom: "16px" }} />
+          <button type="submit" style={{ width: "100%", padding: "12px", background: "linear-gradient(135deg, #d4af37, #f4d03f)", color: "#0a1628", border: "none", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}>Login</button>
+          {loginErr && <p style={{ color: "#f87171", textAlign: "center", marginTop: "12px" }}>{loginErr}</p>}
+        </form>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #0a1628 0%, #1a2d4d 100%)",
-      padding: "40px 20px",
-    }}>
-      <button
-        onClick={() => window.history.back()}
-        style={{
-          marginBottom: "20px",
-          padding: "8px 16px",
-          background: "rgba(212, 175, 55, 0.2)",
-          border: "1px solid rgba(212, 175, 55, 0.4)",
-          color: "#d4af37",
-          borderRadius: "6px",
-          cursor: "pointer",
-          fontSize: "14px",
-          fontWeight: "500",
-        }}
-      >
-        ← Back
-      </button>
-
-      <div style={{
-        maxWidth: "600px",
-        margin: "0 auto",
-        background: "rgba(0, 0, 0, 0.3)",
-        border: "1px solid rgba(212, 175, 55, 0.2)",
-        borderRadius: "12px",
-        padding: "40px",
-      }}>
-        <h1 style={{
-          textAlign: "center",
-          color: "#d4af37",
-          marginBottom: "30px",
-          fontSize: "28px",
-        }}>📄 Generate Permission Letter</h1>
-
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0a1628 0%, #1a2d4d 100%)", padding: "40px 20px" }}>
+      <button onClick={() => window.history.back()} style={{ marginBottom: "20px", padding: "8px 16px", background: "rgba(212, 175, 55, 0.2)", border: "1px solid rgba(212, 175, 55, 0.4)", color: "#d4af37", borderRadius: "6px", cursor: "pointer" }}>← Back</button>
+      <div style={{ maxWidth: "680px", margin: "0 auto", background: "rgba(0, 0, 0, 0.3)", border: "1px solid rgba(212, 175, 55, 0.2)", borderRadius: "12px", padding: "40px" }}>
+        <h1 style={{ textAlign: "center", color: "#d4af37", marginBottom: "10px", fontSize: "28px" }}>Generate Permission Letter</h1>
+        <p style={{ textAlign: "center", color: "#aaa", marginBottom: "28px" }}>Add up to 5 students to one attendance permission letter.</p>
         <form onSubmit={handleGenerate}>
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{
-              display: "block",
-              color: "#aaa",
-              fontSize: "14px",
-              marginBottom: "6px",
-              fontWeight: "500",
-            }}>Student Name *</label>
-            <input
-              type="text"
-              placeholder="Full name"
-              required
-              value={name}
-              onChange={e => setName(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(212,175,55,0.25)",
-                borderRadius: "8px",
-                color: "#fff",
-                fontSize: "14px",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
+          <label style={{ display: "block", color: "#aaa", marginBottom: "6px" }}>College Name *</label>
+          <input type="text" placeholder="College name" required value={college} onChange={(event) => setCollege(event.target.value)} style={{ ...inputStyle, marginBottom: "16px" }} />
+          <label style={{ display: "block", color: "#aaa", marginBottom: "6px" }}>Department *</label>
+          <select required value={department} onChange={(event) => setDepartment(event.target.value)} style={{ ...selectStyle, marginBottom: "24px" }}>
+            <option value="" style={optionStyle}>Select Department</option>
+            {DEPARTMENTS.map((item) => <option key={item} value={item} style={optionStyle}>{item}</option>)}
+          </select>
 
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{
-              display: "block",
-              color: "#aaa",
-              fontSize: "14px",
-              marginBottom: "6px",
-              fontWeight: "500",
-            }}>Roll Number *</label>
-            <input
-              type="text"
-              placeholder="e.g. 23691A0424"
-              required
-              value={rollnumber}
-              onChange={e => setRollnumber(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(212,175,55,0.25)",
-                borderRadius: "8px",
-                color: "#fff",
-                fontSize: "14px",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
+          {students.map((student, index) => (
+            <div key={index} style={{ border: "1px solid rgba(212,175,55,0.25)", borderRadius: "8px", padding: "16px", marginBottom: "12px" }}>
+              <p style={{ color: "#f4d03f", marginBottom: "12px", fontWeight: "600" }}>Student {index + 1}</p>
+              <input type="text" placeholder="Student name" required value={student.name} onChange={(event) => updateStudent(index, "name", event.target.value)} style={{ ...inputStyle, marginBottom: "10px" }} />
+              <input type="text" placeholder="Roll number" required value={student.rollnumber} onChange={(event) => updateStudent(index, "rollnumber", event.target.value)} style={inputStyle} />
+              <select required value={student.year} onChange={(event) => updateStudent(index, "year", event.target.value)} style={{ ...selectStyle, marginTop: "10px" }}>
+                {YEARS.map((year) => <option key={year} value={year} style={optionStyle}>{year}</option>)}
+              </select>
+              {students.length > 1 && <button type="button" onClick={() => setStudents((current) => current.filter((_, studentIndex) => studentIndex !== index))} style={{ marginTop: "10px", padding: "6px 10px", background: "transparent", color: "#f87171", border: "1px solid rgba(248,113,113,0.4)", borderRadius: "6px", cursor: "pointer" }}>Remove student</button>}
+            </div>
+          ))}
 
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{
-              display: "block",
-              color: "#aaa",
-              fontSize: "14px",
-              marginBottom: "6px",
-              fontWeight: "500",
-            }}>Event *</label>
-            <select
-              required
-              value={event}
-              onChange={e => setEvent(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(212,175,55,0.3)",
-                borderRadius: "8px",
-                color: "#fff",
-                fontSize: "14px",
-                outline: "none",
-                boxSizing: "border-box",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={e => {
-                e.target.style.background = "rgba(255,255,255,0.12)";
-                e.target.style.borderColor = "rgba(212,175,55,0.5)";
-                e.target.style.boxShadow = "0 0 8px rgba(212,175,55,0.2)";
-              }}
-              onMouseLeave={e => {
-                e.target.style.background = "rgba(255,255,255,0.08)";
-                e.target.style.borderColor = "rgba(212,175,55,0.3)";
-                e.target.style.boxShadow = "none";
-              }}
-            >
-              <option value="" style={{ background: "#1a1a1a", color: "#aaa" }}>Select Event</option>
-              {EVENTS.map(ev => <option key={ev} value={ev} style={{ background: "#1a1a1a", color: "#fff" }}>{ev}</option>)}
-            </select>
-          </div>
-
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{
-              display: "block",
-              color: "#aaa",
-              fontSize: "14px",
-              marginBottom: "6px",
-              fontWeight: "500",
-            }}>College Name *</label>
-            <input
-              type="text"
-              placeholder="College name"
-              required
-              value={college}
-              onChange={e => setCollege(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(212,175,55,0.25)",
-                borderRadius: "8px",
-                color: "#fff",
-                fontSize: "14px",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: "24px" }}>
-            <label style={{
-              display: "block",
-              color: "#aaa",
-              fontSize: "14px",
-              marginBottom: "6px",
-              fontWeight: "500",
-            }}>Department *</label>
-            <select
-              required
-              value={department}
-              onChange={e => setDepartment(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(212,175,55,0.3)",
-                borderRadius: "8px",
-                color: "#fff",
-                fontSize: "14px",
-                outline: "none",
-                boxSizing: "border-box",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={e => {
-                e.target.style.background = "rgba(255,255,255,0.12)";
-                e.target.style.borderColor = "rgba(212,175,55,0.5)";
-                e.target.style.boxShadow = "0 0 8px rgba(212,175,55,0.2)";
-              }}
-              onMouseLeave={e => {
-                e.target.style.background = "rgba(255,255,255,0.08)";
-                e.target.style.borderColor = "rgba(212,175,55,0.3)";
-                e.target.style.boxShadow = "none";
-              }}
-            >
-              <option value="" style={{ background: "#1a1a1a", color: "#aaa" }}>Select Department</option>
-              {DEPARTMENTS.map(dept => <option key={dept} value={dept} style={{ background: "#1a1a1a", color: "#fff" }}>{dept}</option>)}
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            disabled={generating}
-            style={{
-              width: "100%",
-              padding: "14px",
-              background: "linear-gradient(135deg, #d4af37, #f4d03f)",
-              color: "#0a1628",
-              border: "none",
-              borderRadius: "8px",
-              fontWeight: "600",
-              cursor: generating ? "not-allowed" : "pointer",
-              fontSize: "16px",
-              transition: "transform 0.2s",
-              opacity: generating ? 0.7 : 1,
-            }}
-            onMouseOver={e => !generating && (e.target.style.transform = "scale(1.02)")}
-            onMouseOut={e => !generating && (e.target.style.transform = "scale(1)")}
-          >
-            {generating ? (genStatus || "Generating...") : "📥 Download Permission Letter"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setLoggedIn(false)}
-            style={{
-              width: "100%",
-              padding: "12px",
-              marginTop: "12px",
-              background: "rgba(248, 113, 113, 0.1)",
-              color: "#f87171",
-              border: "1px solid rgba(248, 113, 113, 0.3)",
-              borderRadius: "8px",
-              fontWeight: "500",
-              cursor: "pointer",
-              fontSize: "14px",
-              transition: "all 0.2s",
-            }}
-            onMouseOver={e => {
-              e.target.style.background = "rgba(248, 113, 113, 0.15)";
-              e.target.style.borderColor = "rgba(248, 113, 113, 0.5)";
-            }}
-            onMouseOut={e => {
-              e.target.style.background = "rgba(248, 113, 113, 0.1)";
-              e.target.style.borderColor = "rgba(248, 113, 113, 0.3)";
-            }}
-          >
-            Logout
-          </button>
+          {students.length < 5 && <button type="button" onClick={() => setStudents((current) => [...current, emptyStudent()])} style={{ width: "100%", padding: "11px", marginBottom: "20px", background: "rgba(212,175,55,0.12)", color: "#f4d03f", border: "1px dashed rgba(212,175,55,0.5)", borderRadius: "8px", cursor: "pointer" }}>+ Add student ({students.length}/5)</button>}
+          <button type="submit" disabled={generating} style={{ width: "100%", padding: "14px", background: "linear-gradient(135deg, #d4af37, #f4d03f)", color: "#0a1628", border: "none", borderRadius: "8px", fontWeight: "600", cursor: generating ? "not-allowed" : "pointer", opacity: generating ? 0.7 : 1 }}>{generating ? "Generating..." : "Download Permission Letter"}</button>
+          <button type="button" onClick={() => setLoggedIn(false)} style={{ width: "100%", padding: "12px", marginTop: "12px", background: "rgba(248,113,113,0.1)", color: "#f87171", border: "1px solid rgba(248,113,113,0.3)", borderRadius: "8px", cursor: "pointer" }}>Logout</button>
         </form>
       </div>
     </div>

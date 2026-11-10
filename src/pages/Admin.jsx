@@ -200,15 +200,15 @@ export default function Admin() {
   const allEvents = useMemo(() => ["All", ...new Set(data.map(r => r.event))], [data]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim().toUpperCase(); // Convert to UPPERCASE for alphanumeric matching
     return data.filter(r => {
       const matchEvent  = filterEvent  === "All" || r.event         === filterEvent;
       const matchStatus = filterStatus === "All" || r.paymentStatus === filterStatus;
-      const matchSearch = !q ||
-        (r.name       || "").toLowerCase().includes(q) ||
-        (r.rollnumber || "").toLowerCase().includes(q) ||
-        (r.college    || "").toLowerCase().includes(q) ||
-        (r.email      || "").toLowerCase().includes(q);
+      
+      // Search ONLY rollnumber, convert to uppercase for case-insensitive matching
+      const rollUpper = String(r.rollnumber || "").toUpperCase();
+      const matchSearch = !q || rollUpper.includes(q);
+      
       return matchEvent && matchStatus && matchSearch;
     });
   }, [data, search, filterEvent, filterStatus]);
