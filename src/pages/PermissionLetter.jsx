@@ -98,7 +98,7 @@ const generatePDF = async (reg) => {
   // Date — right aligned
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text("April 1, 2026", PW - MR, 38, { align: "right" });
+  doc.text("12 November 2026", PW - MR, 38, { align: "right" });
 
   // ── From block ──────────────────────────────────────────────────────────────
   let y = 46;
